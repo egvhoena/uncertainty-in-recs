@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import copy
 from scipy.stats import halfnorm, expon, uniform, chi
 
 
@@ -28,7 +29,7 @@ def generate_uniform(amount): #Generates an uniform distribution among the items
         data[i] = uniform.pdf(i, scale=amount) 
     return data
 
-def get_cumulative_prob(y):
+def get_cumulative_prob(y): #GETS THE CUMULATIVE PROBABIITIES OF ITEMS (IT ADDS UP TO MORE THAN 1)
 
     cum_prob = {}
     cum_prob[0] = y[0]
@@ -71,8 +72,19 @@ def plot_playists_popularity(playists): #FUNCTION THAT PLOTS AL THE SONGS APPEAR
 
     id, counts = zip(*num_appearances.items())
     plt.scatter(id, counts)
-    plt.show()
-    return
+    plt.show() #BREAK POINT HERE TO SEE THE PLOT
+    return num_appearances
+
+def get_songs_ordered(songs): #RETURNS A LIST OF SONGS ORDERED BY POPULARITY (AMONG ALL THE PLAYLISTS)
+    ordered_songs = []
+    songs_copy = copy.deepcopy(songs)
+
+    while songs_copy: 
+        max_value = max(songs_copy, key=songs_copy.get)
+        ordered_songs.append(max_value)
+        songs_copy.pop(max_value)
+    #print("Highest used song: ", max_value, " with ", songs_copy[max_value], " instances")
+    return ordered_songs
 
 
 
@@ -84,7 +96,7 @@ x, y = zip(*lists)
 cum_prob = get_cumulative_prob(y)
 playlist = get_playlists(cum_prob)
 plt.plot(x, y)
-plt.show()
+plt.show() 
 
 """If we wanted to make 3000 playlists and the "popular" playlists are 3 times 
 more popular than balanced playlists, and so on the numbers are 2076 popular, 
@@ -121,4 +133,17 @@ for i in type: #GET A RANDOM PLAYLIST OF A SPECIFIC TYPE
     else:
         pl = get_playlists(cum_prob_uni)
     playlist_list.append(pl)
-plot_playists_popularity(playlist_list)
+test = plot_playists_popularity(playlist_list)
+ordered_list = get_songs_ordered(test)
+print(ordered_list)
+
+
+"""Next step, give a class label (prediction) to every song in the toy dataset,
+we have a list of playlists, recomment based on next most popular item?
+we would need: a list of songs ordered by popularity
+
+MAYBE FOR THE TRAINING OF THE MODEL WE GIVE IT THE NUMBER AND THE PROBABILITY, AND AS TARGET VAUE THE
+NEXT MOST POPULAR SONG?"""
+
+
+
