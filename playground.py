@@ -22,21 +22,11 @@ def generate_exponential_inv(amount): #Generates a "niche" (unpopuar) playlist
         data[amount - 1 - i] = expon.pdf(i, scale=(amount/7)) 
     return data
 
-
 def generate_uniform(amount): #Generates an uniform distribution among the items
     data = {}
     for i in range(amount):
         data[i] = uniform.pdf(i, scale=amount) 
     return data
-
-def generate_chi(amount): #Generates an uniform distribution among the items
-    data = {}
-    df = 78
-    for i in range(amount):
-        data[i] = chi.pdf(i, df, scale=amount) 
-        print(data[i])
-    return data
-
 
 def get_cumulative_prob(y):
 
@@ -47,11 +37,9 @@ def get_cumulative_prob(y):
         cum_prob[i] = cum_prob[i-1] + y[i]
     return cum_prob
 
-def get_playlists(cum_prob):
+def get_playlists(cum_prob): #CREATES A RANDOM PLAYLLIST
 
     playlist = [] #empty toy playlist
-
-
 
     #create random playlist (like this bc they dont add to 1)
     while len(playlist) < 100:
@@ -67,12 +55,9 @@ def get_playlists(cum_prob):
             i += 1
 
     playlist.sort()
-    #print(playlist)
     return playlist
 
-
-
-def plot_playists_popularity(playists):
+def plot_playists_popularity(playists): #FUNCTION THAT PLOTS AL THE SONGS APPEARANCES OF ALL PLAYLISTS
     #playlists is a list of lists
 
     num_appearances = {} #Dictionary to store the number of times a song is in a playlist
@@ -82,10 +67,10 @@ def plot_playists_popularity(playists):
             if song in num_appearances.keys():
                 num_appearances[song] += 1
             else:
-                num_appearances[song] = 0
+                num_appearances[song] = 1
 
     id, counts = zip(*num_appearances.items())
-    plt.plot(id, counts)
+    plt.scatter(id, counts)
     plt.show()
     return
 
@@ -122,14 +107,18 @@ _, y_exp_inv = zip(*data_exp_inv)
 data_uniform = sorted(data_uniform.items())
 _, y_uni = zip(*data_uniform)
 
+type = random.choices(population=[0,1,2], weights=[0.2307,0.6923,0.077], k=3000) #returns a list of choices
 
-for i in range(3000):
-    type = random.choices(population=[0,1,2], weights=[0.2307,0.6923,0.077])
-    if type == 1:
-        cum_prob = get_cumulative_prob(y_exp)
-    elif type == 2:
-        cum_prob = get_cumulative_prob(y_exp_inv)
+cum_prob_exp = get_cumulative_prob(y_exp) #GETS DIFFERENT PROBABIITIES
+cum_prob_inv = get_cumulative_prob(y_exp_inv)
+cum_prob_uni = get_cumulative_prob(y_uni)
+
+for i in type: #GET A RANDOM PLAYLIST OF A SPECIFIC TYPE
+    if i == 1:
+        pl = get_playlists(cum_prob_exp)
+    elif i == 2:
+        pl = get_playlists(cum_prob_inv)
     else:
-        cum_prob = get_cumulative_prob(y_uni)
-    playlist_list.append(get_playlists(cum_prob))
+        pl = get_playlists(cum_prob_uni)
+    playlist_list.append(pl)
 plot_playists_popularity(playlist_list)
