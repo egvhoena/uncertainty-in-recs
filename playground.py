@@ -174,8 +174,8 @@ df = create_dataframe(ordered_list)
 train_data, test_data = split_dataset(df)
 model = create_model()
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-history = model.fit(x=train_data['Song'],y=train_data['Next'], epochs=10, validation_data=test_data)
-
+history = model.fit(x=train_data['Song'],y=train_data['Next'], epochs=10, validation_data=(test_data['Song'],test_data['Next']))
+#FIX VVALIDATION DATA -> MAKE TF.DATASET
 """Next step, give a class label (prediction) to every song in the toy dataset,
 we have a list of playlists, recomment based on next most popular item?
 we would need: a list of songs ordered by popularity
