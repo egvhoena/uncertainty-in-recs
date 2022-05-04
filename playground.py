@@ -1,8 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import random
 import copy
+from sklearn.model_selection import train_test_split
 from scipy.stats import halfnorm, expon, uniform, chi
+from keras.layers import Dense, Input, Conv2D, MaxPool2D, LSTM, add
+from keras.layers import Activation, Dropout, Flatten, Embedding
+from keras.models import Model
 
 
 def generate_items_halfnormal(amount):
@@ -86,6 +91,35 @@ def get_songs_ordered(songs): #RETURNS A LIST OF SONGS ORDERED BY POPULARITY (AM
     #print("Highest used song: ", max_value, " with ", songs_copy[max_value], " instances")
     return ordered_songs
 
+def create_dataframe(list): #FOR NOW THE SIZE OF THE DF IS 299 AND NOT 300
+    elems = []
+    pred = []
+    size = len(list)
+    for i in range(size - 1):
+        elems.append(list[i])
+        pred.append(list[i + 1])
+    d = {'Song':elems, 'Next':pred}
+    df = pd.DataFrame(d)
+    return df
+
+def create_model():
+    input = Input(shape=(1,))
+    layer1 = Dense(units=10, activation='relu')(input)
+    output = Dense(1, activation='relu')(layer1)
+
+    model = Model(input, output)
+    model.summary()
+    return model
+
+def split_dataset(dataframe):
+    X = dataframe['Song']
+    y = dataframe['Next']
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    train = {'Song':X_train, 'Next': y_train}
+    test = {'Song':X_test, 'Next': y_test}
+    return train, test
+
 
 
 data = generate_exponential(300)
@@ -135,8 +169,12 @@ for i in type: #GET A RANDOM PLAYLIST OF A SPECIFIC TYPE
     playlist_list.append(pl)
 test = plot_playists_popularity(playlist_list)
 ordered_list = get_songs_ordered(test)
-print(ordered_list)
-
+#print(ordered_list) #List of songs ordered by popularity
+df = create_dataframe(ordered_list)
+train_data, test_data = split_dataset(df)
+model = create_model()
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+history = model.fit(x=train_data['Song'],y=train_data['Next'], epochs=10, validation_data=test_data)
 
 """Next step, give a class label (prediction) to every song in the toy dataset,
 we have a list of playlists, recomment based on next most popular item?
