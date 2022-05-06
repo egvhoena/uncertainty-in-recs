@@ -8,6 +8,7 @@ from scipy.stats import halfnorm, expon, uniform, chi
 from keras.layers import Dense, Input, Conv2D, MaxPool2D, LSTM, add
 from keras.layers import Activation, Dropout, Flatten, Embedding
 from keras.models import Model
+from IPython.display import display
 
 
 def generate_items_halfnormal(amount):
@@ -48,7 +49,7 @@ def get_playlists(cum_prob): #CREATES A RANDOM PLAYLLIST
     playlist = [] #empty toy playlist
 
     #create random playlist (like this bc they dont add to 1)
-    while len(playlist) < 100:
+    while len(playlist) < 20:
 
         prob = np.random.random()
         #print(prob)
@@ -104,12 +105,48 @@ def create_dataframe(list): #FOR NOW THE SIZE OF THE DF IS 299 AND NOT 300
 
 def create_model():
     input = Input(shape=(1,))
-    layer1 = Dense(units=10, activation='relu')(input)
-    output = Dense(1, activation='relu')(layer1)
+    layer = Dense(10, activation='relu')(input)
+    """
+    fe2 = Dense(256, activation='relu')(input)
+    fe3 = Dense(256, activation='relu')(fe2)
+    decoder = Dense(256, activation='relu')(fe3)
+    decoder2 = Dense(256, activation='relu')(decoder)"""
+    output = Dense(1, activation='relu')(layer)
 
+    """fe = Dense(5, activation='relu')(input)
+    decoder = LSTM(1)(fe)
+    output = Dense(1, activation='relu')(decoder)"""
     model = Model(input, output)
     model.summary()
     return model
+
+def create_pairs(playlists): #playlists should be a list of lists, ordered
+    pairs = np.zeros((300,300))
+    for playlist in playlists:
+        for i in range(len(playlist)-1):
+            pairs[playlist[i]][playlist[i+1]] += 1
+    return pairs
+
+def order_playists(playlists):
+    for playlist in playlists:
+        playlist.sort()
+    return playlists
+
+def create_training_data(pairs):
+    songs = []
+    next = []
+    for i in range(len(pairs)):
+        #max_num = 0
+        songs.append(i)
+        #max_num = max(pairs[i])
+        pred_song = np.argmax(pairs[i])
+        if i != pred_song:
+            print("Song ", i, " and ", pred_song)
+        next.append(pred_song)
+    d = {"Song":songs, "Next":next}
+    df = pd.DataFrame(d)
+    return df
+
 
 def split_dataset(dataframe):
     X = dataframe['Song']
@@ -167,8 +204,18 @@ for i in type: #GET A RANDOM PLAYLIST OF A SPECIFIC TYPE
     else:
         pl = get_playlists(cum_prob_uni)
     playlist_list.append(pl)
-test = plot_playists_popularity(playlist_list)
-ordered_list = get_songs_ordered(test)
+playlists_ordered = order_playists(playlist_list)
+pairs = create_pairs(playlist_list) #playlists_ordered
+df = create_training_data(pairs)
+display(df)
+train_data, test_data = split_dataset(df)
+model = create_model()
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+history = model.fit(x=train_data['Song'],y=train_data['Next'], epochs=10, validation_data=(test_data['Song'],test_data['Next']))
+
+"""
+num_apprs = plot_playists_popularity(playlist_list)
+ordered_list = get_songs_ordered(num_apprs)
 #print(ordered_list) #List of songs ordered by popularity
 df = create_dataframe(ordered_list)
 train_data, test_data = split_dataset(df)
@@ -176,6 +223,9 @@ model = create_model()
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 history = model.fit(x=train_data['Song'],y=train_data['Next'], epochs=10, validation_data=(test_data['Song'],test_data['Next']))
 #FIX VVALIDATION DATA -> MAKE TF.DATASET
+"""
+
+
 """Next step, give a class label (prediction) to every song in the toy dataset,
 we have a list of playlists, recomment based on next most popular item?
 we would need: a list of songs ordered by popularity
