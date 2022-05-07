@@ -105,13 +105,13 @@ def create_dataframe(list): #FOR NOW THE SIZE OF THE DF IS 299 AND NOT 300
 
 def create_model():
     input = Input(shape=(1,))
-    layer = Dense(10, activation='relu')(input)
+    #layer = Dense(10, activation='relu')(input)
     """
     fe2 = Dense(256, activation='relu')(input)
     fe3 = Dense(256, activation='relu')(fe2)
     decoder = Dense(256, activation='relu')(fe3)
     decoder2 = Dense(256, activation='relu')(decoder)"""
-    output = Dense(1, activation='relu')(layer)
+    output = Dense(1, activation='relu')(input)
 
     """fe = Dense(5, activation='relu')(input)
     decoder = LSTM(1)(fe)
