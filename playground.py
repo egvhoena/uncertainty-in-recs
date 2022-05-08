@@ -1,3 +1,4 @@
+from cgi import test
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -7,7 +8,8 @@ from sklearn.model_selection import train_test_split
 from scipy.stats import halfnorm, expon, uniform, chi
 from keras.layers import Dense, Input, Conv2D, MaxPool2D, LSTM, add
 from keras.layers import Activation, Dropout, Flatten, Embedding
-from keras.models import Model
+from keras.models import Model, Sequential
+import tensorflow as tf
 from IPython.display import display
 
 
@@ -104,20 +106,20 @@ def create_dataframe(list): #FOR NOW THE SIZE OF THE DF IS 299 AND NOT 300
     return df
 
 def create_model():
+    model = Sequential()
     input = Input(shape=(1,))
-    #layer = Dense(10, activation='relu')(input)
-    """
-    fe2 = Dense(256, activation='relu')(input)
-    fe3 = Dense(256, activation='relu')(fe2)
-    decoder = Dense(256, activation='relu')(fe3)
-    decoder2 = Dense(256, activation='relu')(decoder)"""
-    output = Dense(1, activation='relu')(input)
+    model.add(input)
+    model.add(Dense(10, activation='relu'))
+    model.add(Dense(10, activation='relu'))
+    model.add(Dense(1))
 
-    """fe = Dense(5, activation='relu')(input)
-    decoder = LSTM(1)(fe)
-    output = Dense(1, activation='relu')(decoder)"""
+    """
+    input = Input(shape=(1,))
+    layer = Dense(10, activation='relu')(input)
+    dropout = Dropout(0.3)(layer)
+    output = Dense(1, activation='relu')(dropout)
     model = Model(input, output)
-    model.summary()
+    model.summary()"""
     return model
 
 def create_pairs(playlists): #playlists should be a list of lists, ordered
@@ -155,8 +157,31 @@ def split_dataset(dataframe):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     train = {'Song':X_train, 'Next': y_train}
     test = {'Song':X_test, 'Next': y_test}
-    return train, test
+    mean = train['Song'].mean()
+    std = train['Song'].std()
+    return train, test, mean, std
 
+def norm_data(data, mean, std):
+    songs_norm = (data['Song'] - mean) / std
+    data['Song'] = songs_norm
+    return data
+
+def get_tf_dataset(train, test):
+    train_X = tf.data.Dataset.from_tensor_slices(train['Song'])
+    train_Y = tf.data.Dataset.from_tensor_slices(train['Next'])
+
+    train_dataset = tf.data.Dataset.zip((train_X, train_Y))
+    train_dataset = train_dataset.shuffle(1000).batch(64)
+    train_dataset = train_dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
+
+    test_X = tf.data.Dataset.from_tensor_slices(test['Song'])
+    test_Y = tf.data.Dataset.from_tensor_slices(test['Next'])
+
+    test_dataset = tf.data.Dataset.zip((test_X, test_Y))
+    test_dataset = test_dataset.shuffle(1000).batch(64)
+    test_dataset = test_dataset.prefetch(buffer_size=tf.data.AUTOTUNE)
+
+    return train_dataset, test_dataset
 
 
 data = generate_exponential(300)
@@ -207,12 +232,15 @@ for i in type: #GET A RANDOM PLAYLIST OF A SPECIFIC TYPE
 playlists_ordered = order_playists(playlist_list)
 pairs = create_pairs(playlist_list) #playlists_ordered
 df = create_training_data(pairs)
-display(df)
-train_data, test_data = split_dataset(df)
+train_data, test_data, mean, std = split_dataset(df)
+train_dataset, test_dataset = get_tf_dataset(train_data, test_data)
+#train_data = norm_data(train_data, mean, std)
+#test_data = norm_data(test_data, mean, std)
 model = create_model()
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
-history = model.fit(x=train_data['Song'],y=train_data['Next'], epochs=10, validation_data=(test_data['Song'],test_data['Next']))
-
+model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+history = model.fit(train_dataset, epochs=1000, validation_data=test_dataset, verbose=1)
+pred = model.predict([1, 45, 73, 159, 201, 278])
+print(pred)
 """
 num_apprs = plot_playists_popularity(playlist_list)
 ordered_list = get_songs_ordered(num_apprs)
