@@ -80,6 +80,8 @@ def plot_playists_popularity(playists): #FUNCTION THAT PLOTS AL THE SONGS APPEAR
 
     id, counts = zip(*num_appearances.items())
     plt.scatter(id, counts)
+    plt.xlabel("Song number")
+    plt.ylabel("Number of appearances")
     plt.show() #BREAK POINT HERE TO SEE THE PLOT
     return num_appearances
 
@@ -111,7 +113,7 @@ def create_model():
     model.add(input)
     model.add(Dense(10, activation='relu'))
     model.add(Dense(10, activation='relu'))
-    model.add(Dense(1))
+    model.add(Dense(300, activation='sigmoid'))
 
     """
     input = Input(shape=(1,))
@@ -142,13 +144,10 @@ def create_training_data(pairs):
         songs.append(i)
         #max_num = max(pairs[i])
         pred_song = np.argmax(pairs[i])
-        if i != pred_song:
-            print("Song ", i, " and ", pred_song)
         next.append(pred_song)
     d = {"Song":songs, "Next":next}
     df = pd.DataFrame(d)
     return df
-
 
 def split_dataset(dataframe):
     X = dataframe['Song']
@@ -157,9 +156,15 @@ def split_dataset(dataframe):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
     train = {'Song':X_train, 'Next': y_train}
     test = {'Song':X_test, 'Next': y_test}
-    mean = train['Song'].mean()
-    std = train['Song'].std()
-    return train, test, mean, std
+    return train, test
+
+def split_dataset_prob(dataframe):
+    X = dataframe['Song']
+    dataframe = dataframe.drop('Song', axis=1)
+    y = dataframe
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    return X_train, X_test, y_train, y_test
 
 def norm_data(data, mean, std):
     songs_norm = (data['Song'] - mean) / std
@@ -183,6 +188,28 @@ def get_tf_dataset(train, test):
 
     return train_dataset, test_dataset
 
+def get_probabilities(pairs):
+    for num in range(len(pairs)):
+        total = sum(pairs[num])
+        pairs[num] /= total
+    return pairs
+
+def get_prob_dataframe(probs):
+    songs = []
+    next = []
+    for i in range(len(probs)):
+        #max_num = 0
+        songs.append(i)
+        #max_num = max(pairs[i])
+        next.append(pairs[i])
+    for i in range(len(next[299])):
+        next[299][i] = 0
+    next[299][298] = 1
+    dataframe_next = pd.DataFrame(next)
+    d = {'Song': songs}
+    df = pd.DataFrame(d)
+    result = pd.concat([df, dataframe_next], axis=1, join='inner')
+    return result
 
 data = generate_exponential(300)
 #data = generate_exponential_inv(300)
@@ -229,16 +256,20 @@ for i in type: #GET A RANDOM PLAYLIST OF A SPECIFIC TYPE
     else:
         pl = get_playlists(cum_prob_uni)
     playlist_list.append(pl)
+plot_playists_popularity(playlist_list)
 playlists_ordered = order_playists(playlist_list)
 pairs = create_pairs(playlist_list) #playlists_ordered
+pairs2 = get_probabilities(pairs)
+df2 = get_prob_dataframe(pairs2)
+#print(df2)
 df = create_training_data(pairs)
-train_data, test_data, mean, std = split_dataset(df)
+train_data, test_data= split_dataset(df)
+X_train, X_test, y_train, y_test = split_dataset_prob(df2)
 train_dataset, test_dataset = get_tf_dataset(train_data, test_data)
-#train_data = norm_data(train_data, mean, std)
-#test_data = norm_data(test_data, mean, std)
 model = create_model()
-model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
-history = model.fit(train_dataset, epochs=1000, validation_data=test_dataset, verbose=1)
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+#history = model.fit(train_dataset, epochs=1000, validation_data=test_dataset, verbose=1)
+history = model.fit(x=X_train, y=y_train, epochs=100, validation_data=(X_test,y_test))
 pred = model.predict([1, 45, 73, 159, 201, 278])
 print(pred)
 """
