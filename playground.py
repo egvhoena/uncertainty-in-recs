@@ -113,7 +113,7 @@ def create_model():
     model.add(input)
     model.add(Dense(10, activation='relu'))
     model.add(Dense(10, activation='relu'))
-    model.add(Dense(300, activation='sigmoid'))
+    model.add(Dense(300, activation='sigmoid')) #model.add(Dense(1))
 
     """
     input = Input(shape=(1,))
@@ -210,6 +210,14 @@ def get_prob_dataframe(probs):
     df = pd.DataFrame(d)
     result = pd.concat([df, dataframe_next], axis=1, join='inner')
     return result
+
+def get_nll(true_song, probs): #true_song has to be in [0,0,0...1,0] format, being the 1 in the correct song index
+    nll = 0                     
+    for i in range(len(true_song)):
+        nll += true_song[i] * probs[i]
+    nll = -np.log(nll)
+    return nll
+
 
 data = generate_exponential(300)
 #data = generate_exponential_inv(300)
