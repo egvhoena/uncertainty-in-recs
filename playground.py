@@ -111,8 +111,8 @@ def create_model():
     model = Sequential()
     input = Input(shape=(1,))
     model.add(input)
-    model.add(Dense(10, activation='relu'))
-    model.add(Dense(10, activation='relu'))
+    model.add(Dense(10, activation='tanh'))
+    model.add(Dense(10, activation='tanh'))
     model.add(Dense(300, activation='sigmoid')) #model.add(Dense(1))
 
     """
@@ -198,10 +198,8 @@ def get_prob_dataframe(probs):
     songs = []
     next = []
     for i in range(len(probs)):
-        #max_num = 0
         songs.append(i)
-        #max_num = max(pairs[i])
-        next.append(pairs[i])
+        next.append(probs[i])
     for i in range(len(next[299])):
         next[299][i] = 0
     next[299][298] = 1
@@ -212,12 +210,45 @@ def get_prob_dataframe(probs):
     return result
 
 def get_nll(true_song, probs): #true_song has to be in [0,0,0...1,0] format, being the 1 in the correct song index
-    nll = 0                     
+    nll = 0                     #probs is the output of the nn
     for i in range(len(true_song)):
         nll += true_song[i] * probs[i]
     nll = -np.log(nll)
     return nll
 
+def get_true_song(next_songs): #expected song
+    true_song = []
+    item = np.argmax(next_songs)
+    for i in range(len(next_songs)):
+        if i == item:
+            true_song.append(1)
+            print("Predicted song: ", item)
+        else:
+            true_song.append(0)
+    return true_song
+
+def get_nll_list(expected, idx, predictions):
+    nll_list = []
+    j = 0
+    for i in idx:
+        true_song = get_true_song(expected[i])
+        nll_list.append(get_nll(true_song, predictions[j]))
+        j += 1
+    return nll_list
+
+def plot_uncertainty_pop(popuarity, uncertainty):
+    id, counts = zip(*popuarity.items())
+    plot_dict = {}
+    i = 0
+    for num in counts:
+        #what if its already a number
+        plot_dict[num] = uncertainty[i]
+        i += 1
+    pop, unc = zip(*plot_dict.items())
+    plt.scatter(pop, unc)
+    plt.xlabel("Popuarity")
+    plt.ylabel("Uncertainty")
+    plt.show() #BREAK POINT HERE TO SEE THE PLOT
 
 data = generate_exponential(300)
 #data = generate_exponential_inv(300)
@@ -264,7 +295,7 @@ for i in type: #GET A RANDOM PLAYLIST OF A SPECIFIC TYPE
     else:
         pl = get_playlists(cum_prob_uni)
     playlist_list.append(pl)
-plot_playists_popularity(playlist_list)
+popuarity = plot_playists_popularity(playlist_list) #returns the number of appearances of each song
 playlists_ordered = order_playists(playlist_list)
 pairs = create_pairs(playlist_list) #playlists_ordered
 pairs2 = get_probabilities(pairs)
@@ -278,8 +309,14 @@ model = create_model()
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 #history = model.fit(train_dataset, epochs=1000, validation_data=test_dataset, verbose=1)
 history = model.fit(x=X_train, y=y_train, epochs=100, validation_data=(X_test,y_test))
-pred = model.predict([1, 45, 73, 159, 201, 278])
+nums = list(range(0,300))
+pred = model.predict(nums)
+uncertainty = get_nll_list(y_train, nums, pred)
+plot_uncertainty_pop(popuarity, uncertainty)
 print(pred)
+
+
+
 """
 num_apprs = plot_playists_popularity(playlist_list)
 ordered_list = get_songs_ordered(num_apprs)
