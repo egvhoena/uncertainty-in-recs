@@ -5,11 +5,13 @@ import pandas as pd
 import random
 import copy
 from sklearn.model_selection import train_test_split
-from scipy.stats import halfnorm, expon, uniform, chi
+from scipy.stats import halfnorm, expon, uniform, chi, norm
+from keras import callbacks
 from keras.layers import Dense, Input, Conv2D, MaxPool2D, LSTM, add
 from keras.layers import Activation, Dropout, Flatten, Embedding
 from keras.models import Model, Sequential
 import tensorflow as tf
+import scipy.stats
 from IPython.display import display
 
 
@@ -112,16 +114,14 @@ def create_model():
     input = Input(shape=(1,))
     model.add(input)
     model.add(Dense(10, activation='tanh'))
-    model.add(Dense(10, activation='tanh'))
+    model.add(Dense(20, activation='tanh'))
+    model.add(Dense(30, activation='tanh'))
+    model.add(Dense(40, activation='tanh'))
+    model.add(Dense(50, activation='tanh'))
+    model.add(Dense(60, activation='tanh'))
+    model.add(Dense(40, activation='tanh'))
+    model.add(Dense(70, activation='tanh'))
     model.add(Dense(300, activation='sigmoid')) #model.add(Dense(1))
-
-    """
-    input = Input(shape=(1,))
-    layer = Dense(10, activation='relu')(input)
-    dropout = Dropout(0.3)(layer)
-    output = Dense(1, activation='relu')(dropout)
-    model = Model(input, output)
-    model.summary()"""
     return model
 
 def create_pairs(playlists): #playlists should be a list of lists, ordered
@@ -164,6 +164,8 @@ def split_dataset_prob(dataframe):
     y = dataframe
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    X_train = X
+    y_train = y
     return X_train, X_test, y_train, y_test
 
 def norm_data(data, mean, std):
@@ -222,7 +224,7 @@ def get_true_song(next_songs): #expected song
     for i in range(len(next_songs)):
         if i == item:
             true_song.append(1)
-            print("Predicted song: ", item)
+            #print("Predicted song: ", item)
         else:
             true_song.append(0)
     return true_song
@@ -245,10 +247,14 @@ def plot_uncertainty_pop(popuarity, uncertainty):
         plot_dict[num] = uncertainty[i]
         i += 1
     pop, unc = zip(*plot_dict.items())
+    print(scipy.stats.pearsonr(pop, unc))
+    print(scipy.stats.spearmanr(pop, unc))
+    print(scipy.stats.kendalltau(pop, unc))
     plt.scatter(pop, unc)
     plt.xlabel("Popuarity")
     plt.ylabel("Uncertainty")
     plt.show() #BREAK POINT HERE TO SEE THE PLOT
+
 
 data = generate_exponential(300)
 #data = generate_exponential_inv(300)
@@ -267,6 +273,7 @@ Other option is probabilities x = 69.2307692308%; y = 23.0769230769%; z = 7.6923
 Other option is to randomly decide the type of the playlists"""
 
 
+random.seed(1234)
 playlist_list = []
 data_exp = generate_exponential(300)
 data_exp_inv = generate_exponential_inv(300)
@@ -301,14 +308,15 @@ pairs = create_pairs(playlist_list) #playlists_ordered
 pairs2 = get_probabilities(pairs)
 df2 = get_prob_dataframe(pairs2)
 #print(df2)
-df = create_training_data(pairs)
-train_data, test_data= split_dataset(df)
+#df = create_training_data(pairs)
+#train_data, test_data= split_dataset(df)
 X_train, X_test, y_train, y_test = split_dataset_prob(df2)
-train_dataset, test_dataset = get_tf_dataset(train_data, test_data)
+#train_dataset, test_dataset = get_tf_dataset(train_data, test_data)
 model = create_model()
+callback1 = callbacks.EarlyStopping(monitor='loss', patience=5)
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 #history = model.fit(train_dataset, epochs=1000, validation_data=test_dataset, verbose=1)
-history = model.fit(x=X_train, y=y_train, epochs=100, validation_data=(X_test,y_test))
+history = model.fit(x=X_train, y=y_train, epochs=200, validation_data=(X_test,y_test))
 nums = list(range(0,300))
 pred = model.predict(nums)
 uncertainty = get_nll_list(y_train, nums, pred)
