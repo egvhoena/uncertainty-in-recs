@@ -308,7 +308,7 @@ pairs = create_pairs(playlist_list) #playlists_ordered
 pairs2 = get_probabilities(pairs)
 df2 = get_prob_dataframe(pairs2)
 #print(df2)
-#df = create_training_data(pairs)
+df = create_training_data(pairs)
 #train_data, test_data= split_dataset(df)
 X_train, X_test, y_train, y_test = split_dataset_prob(df2)
 #train_dataset, test_dataset = get_tf_dataset(train_data, test_data)
